@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 98" width="480" height="98" fill="none">
+  <!-- Red lower-left triangle -->
+  <polygon points="1,96 33,34 66,96" fill="#E30613" />
+  <!-- Upper-right black/currentColor polygon -->
+  <polygon points="33,34 49,2 99,96 66,96" fill="currentColor" />
+  <!-- RLITECH text with safe bounding box so H is fully visible -->
+  <text x="105" y="88" font-family="'FreeSans', 'Arial Black', 'Helvetica Neue', 'Arial', sans-serif" font-weight="900" font-size="78" textLength="366" lengthAdjust="spacingAndGlyphs" fill="currentColor">RLITECH</text>
+</svg>
