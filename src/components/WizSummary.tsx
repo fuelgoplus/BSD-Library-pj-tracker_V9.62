@@ -184,6 +184,7 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
           datasets.push({
             type: 'bar',
             label: clusterName,
+            clusterProjects: clusterProjects,
             data: dailyData,
             backgroundColor: getCustomColor(clusterName, palette),
             stack: 'Stack 0',
@@ -206,6 +207,7 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
           datasets.push({
             type: 'bar',
             label: p.desc,
+            projectStatus: p.status || 'Processing',
             data: dailyData,
             backgroundColor: genericPal[i % genericPal.length],
             stack: 'Stack 0',
@@ -333,14 +335,36 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
             padding: 12,
             boxPadding: 6,
             cornerRadius: 8,
+            filter: (item: any) => item.dataset.type === 'bar' && item.parsed.y > 0,
             callbacks: {
-              label: (context: any) => `${context.dataset.label}: ${context.parsed.y.toFixed(1)} MH/d`,
+              label: (context: any) => {
+                const val = context.parsed.y;
+                if (val <= 0) return '';
+                if (chartMode === 'project') {
+                  const status = context.dataset.projectStatus || 'Processing';
+                  return ` [${status}] ${context.dataset.label}: ${val.toFixed(1)} MH/d`;
+                } else {
+                  const time = labelTimes[context.dataIndex];
+                  const activeInCluster = (context.dataset.clusterProjects || []).filter(
+                    (p: any) => time >= p.startT && time <= p.endT
+                  );
+                  if (activeInCluster.length > 0) {
+                    const lines = [` ${context.dataset.label}: ${val.toFixed(1)} MH/d`];
+                    activeInCluster.forEach((p: any) => {
+                      lines.push(`   ↳ [${p.status || 'Processing'}] ${p.desc}: ${(p.dailyMH || 0).toFixed(1)} MH/d`);
+                    });
+                    return lines;
+                  }
+                  return ` ${context.dataset.label}: ${val.toFixed(1)} MH/d`;
+                }
+              },
               footer: (tooltipItems: any[]) => {
                 let total = 0;
                 tooltipItems.forEach(item => {
                   if (item.dataset.type === 'bar') total += item.parsed.y;
                 });
-                return (lang === 'en' ? 'TOTAL LOAD: ' : '當日總負載: ') + total.toFixed(1) + ' MH/d';
+                const overloadNote = total > 5.0 ? (lang === 'en' ? ' ⚠️ [OVERLOAD > 5.0]' : ' ⚠️ [超載 > 5.0]') : '';
+                return (lang === 'en' ? 'TOTAL LOAD: ' : '當日總負載: ') + total.toFixed(1) + ' MH/d' + overloadNote;
               },
             },
           },
@@ -408,17 +432,18 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
                       {pDur} days
                     </span>
                     <span
-                      className="text-[10px] font-semibold whitespace-nowrap px-2 py-1 rounded shadow-sm leading-[1.2]"
+                      className="text-[10px] font-bold whitespace-nowrap px-2 py-0.5 rounded shadow-xs leading-[1.2] flex items-center gap-1"
                       style={{ backgroundColor: 'var(--text-blue)', color: '#FFFFFF' }}
                       title="Man-Hours / Per Day"
                     >
                       {pMH} MH/d
                     </span>
                     <span
-                      className="text-[10px] font-semibold whitespace-nowrap px-2 py-1 rounded shadow-sm text-white leading-[1.2]"
-                      style={{ backgroundColor: 'var(--brand-text)' }}
+                      className="text-[10px] font-bold whitespace-nowrap px-2 py-0.5 rounded shadow-xs text-white leading-[1.2] flex items-center gap-1"
+                      style={{ backgroundColor: 'var(--brand-text)', color: '#FFFFFF' }}
                       title="Total Accumulated Man-Hours"
                     >
+                      <i className="fa-regular fa-clock text-[9px]"></i>
                       {accumMH} Total MH
                     </span>
                   </div>
@@ -506,9 +531,11 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
                                   <span className="flex flex-wrap items-center gap-1.5">
                                     <span>{p.desc}</span>
                                     <span
-                                      className="text-[9.5px] px-1.5 py-0.5 rounded bg-black bg-opacity-5 whitespace-nowrap"
-                                      style={{ color: 'var(--brand-text)' }}
+                                      className="text-[10px] font-bold px-2 py-0.5 rounded shadow-xs whitespace-nowrap text-white flex items-center gap-1 leading-[1.2]"
+                                      style={{ backgroundColor: 'var(--brand-text)', color: '#FFFFFF' }}
+                                      title="Total Man-Hours"
                                     >
+                                      <i className="fa-regular fa-clock text-[9px]"></i>
                                       {accumMH} MH
                                     </span>
                                     <span className="text-[9px] px-1.5 py-0.5 rounded border border-slate-200 bg-slate-50 text-slate-500 whitespace-nowrap flex items-center gap-1">
@@ -658,9 +685,11 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
                                   </span>
                                   <div className="flex items-center gap-1.5 flex-wrap">
                                     <span
-                                      className="text-[9.5px] px-1.5 py-0.5 rounded bg-black bg-opacity-5 whitespace-nowrap"
-                                      style={{ color: 'var(--brand-text)' }}
+                                      className="text-[10px] font-bold px-2 py-0.5 rounded shadow-xs whitespace-nowrap text-white flex items-center gap-1 leading-[1.2]"
+                                      style={{ backgroundColor: 'var(--brand-text)', color: '#FFFFFF' }}
+                                      title="Total Man-Hours"
                                     >
+                                      <i className="fa-regular fa-clock text-[9px]"></i>
                                       {accumMH} MH
                                     </span>
                                     <span className="text-[9px] px-1.5 py-0.5 rounded border border-slate-200 bg-slate-50 text-slate-500 whitespace-nowrap flex items-center gap-1">
@@ -815,11 +844,29 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
         return riskRegex.test(combinedText);
       });
 
-      let contextText = '';
+      let contextText: React.ReactNode = '';
       if (lang === 'en') {
-        contextText = `Across the selected period, total resource allocation is ${totalPeriodMH.toFixed(1)}h. ${top3Pct}% of ${ownerTarget}'s capacity is concentrated on the top ${top3Projects.length} projects (primarily delivering ${topProjName}).`;
+        contextText = (
+          <span>
+            Across the selected period, total resource allocation is{' '}
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded font-bold text-white text-[11px] shadow-xs" style={{ backgroundColor: 'var(--brand-text)' }}>
+              <i className="fa-regular fa-clock text-[9px]"></i>
+              {totalPeriodMH.toFixed(1)}h
+            </span>
+            . {top3Pct}% of {ownerTarget}'s capacity is concentrated on the top {top3Projects.length} projects (primarily delivering {topProjName}).
+          </span>
+        );
       } else {
-        contextText = `在選定期間內，總資源配置為 ${totalPeriodMH.toFixed(1)}h。${ownerTarget} 有高達 ${top3Pct}% 的產能集中於前 ${top3Projects.length} 大專案（主要交付 ${topProjName}）。`;
+        contextText = (
+          <span>
+            在選定期間內，總資源配置為{' '}
+            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded font-bold text-white text-[11px] shadow-xs" style={{ backgroundColor: 'var(--brand-text)' }}>
+              <i className="fa-regular fa-clock text-[9px]"></i>
+              {totalPeriodMH.toFixed(1)}h
+            </span>
+            。{ownerTarget} 有高達 {top3Pct}% 的產能集中於前 {top3Projects.length} 大專案（主要交付 {topProjName}）。
+          </span>
+        );
       }
 
       return (
@@ -912,7 +959,12 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
                           {p.dateStr}
                         </span>
                       </div>
-                      <span style={{ color: 'var(--brand-text)', flexShrink: 0 }}>
+                      <span
+                        className="text-[10px] font-bold px-2 py-0.5 rounded shadow-xs text-white flex items-center gap-1"
+                        style={{ backgroundColor: 'var(--brand-text)', color: '#FFFFFF', flexShrink: 0 }}
+                        title="Project Hours"
+                      >
+                        <i className="fa-regular fa-clock text-[9px]"></i>
                         {p.mh.toFixed(1)}h ({p.pct.toFixed(0)}%)
                       </span>
                     </div>
@@ -946,7 +998,12 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
                       <span>
                         {idx + 1}. {c.cluster}
                       </span>
-                      <span style={{ color: 'var(--brand-sub)' }}>
+                      <span
+                        className="text-[10px] font-bold px-2 py-0.5 rounded shadow-xs text-white flex items-center gap-1"
+                        style={{ backgroundColor: '#1E293B', color: '#FFFFFF', flexShrink: 0 }}
+                        title="Cluster Hours"
+                      >
+                        <i className="fa-solid fa-layer-group text-[9px] text-[#FACC15]"></i>
                         {c.mh.toFixed(1)}h ({c.pct.toFixed(0)}%)
                       </span>
                     </div>
