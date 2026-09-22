@@ -40,10 +40,10 @@ export type WizViewMode = 'project' | 'category' | 'weekly' | 'mh_breakdown' | '
 export type StatusDistMode = 'status' | 'category' | 'cluster';
 
 export interface FilterState {
-  owner: string;
-  status: string;
-  category: string;
-  cluster: string;
+  owner: string | string[];
+  status: string | string[];
+  category: string | string[];
+  cluster: string | string[];
   startMonth: string;
   endMonth: string;
   search?: string;

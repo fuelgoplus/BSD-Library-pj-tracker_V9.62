@@ -3,6 +3,7 @@ import * as XLSX from 'xlsx';
 import { ProjectItem, ThemeColors, ThemeName, Language, FilterState } from './types';
 import { THEMES, INITIAL_SAMPLE_ROWS } from './constants/theme';
 import { processData, isDateOverlapping } from './utils/dataProcessor';
+import { matchesFilterValue } from './utils/filterHelpers';
 import { Header } from './components/Header';
 import { GanttChart } from './components/GanttChart';
 import { WizSummary } from './components/WizSummary';
@@ -296,10 +297,10 @@ export default function App() {
   const filteredData = useMemo(() => {
     const q = (filters.search || '').toLowerCase().trim();
     return rawData.filter(d => {
-      if (filters.owner !== 'All' && d.owner !== filters.owner) return false;
-      if (filters.status !== 'All' && d.status !== filters.status) return false;
-      if (filters.category !== 'All' && d.category !== filters.category) return false;
-      if (filters.cluster !== 'All' && d.cluster !== filters.cluster) return false;
+      if (!matchesFilterValue(d.owner, filters.owner)) return false;
+      if (!matchesFilterValue(d.status, filters.status)) return false;
+      if (!matchesFilterValue(d.category, filters.category)) return false;
+      if (!matchesFilterValue(d.cluster, filters.cluster)) return false;
       if (!isDateOverlapping(d, filters.startMonth, filters.endMonth)) return false;
       if (q && !d.desc.toLowerCase().includes(q) && !d.owner.toLowerCase().includes(q)) return false;
       return true;

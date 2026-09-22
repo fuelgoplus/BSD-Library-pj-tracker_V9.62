@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
-import { ProjectItem, ThemeColors } from '../types';
+import { ProjectItem, ThemeColors, FilterState } from '../types';
 import { TEXT } from '../constants/theme';
+import { matchesFilterValue, formatFilterDisplay } from './filterHelpers';
 
 export function parseDate(v: any): Date | null {
   if (!v) return null;
@@ -269,15 +270,15 @@ export function exportColorMarkdown(colors: Record<string, string>) {
 
 export function generateAndDownloadHTMLReport(
   rawData: ProjectItem[],
-  ganttFilters: { owner: string; status: string; category: string; cluster: string; startMonth: string; endMonth: string },
+  ganttFilters: FilterState,
   lang: 'en' | 'zh'
 ) {
   const t = TEXT[lang];
   let wizData = rawData.filter(d => {
-    if (ganttFilters.owner !== 'All' && d.owner !== ganttFilters.owner) return false;
-    if (ganttFilters.status !== 'All' && d.status !== ganttFilters.status) return false;
-    if (ganttFilters.category !== 'All' && d.category !== ganttFilters.category) return false;
-    if (ganttFilters.cluster !== 'All' && d.cluster !== ganttFilters.cluster) return false;
+    if (!matchesFilterValue(d.owner, ganttFilters.owner)) return false;
+    if (!matchesFilterValue(d.status, ganttFilters.status)) return false;
+    if (!matchesFilterValue(d.category, ganttFilters.category)) return false;
+    if (!matchesFilterValue(d.cluster, ganttFilters.cluster)) return false;
     if (!isDateOverlapping(d, ganttFilters.startMonth, ganttFilters.endMonth)) return false;
     return true;
   });
@@ -347,8 +348,8 @@ export function generateAndDownloadHTMLReport(
   const top3Projects = projectSummary.slice(0, 3);
   const top3MhSum = top3Projects.reduce((sum, p) => sum + p.totalMh, 0);
   const top3Pct = totalPeriodMH > 0 ? Math.round((top3MhSum / totalPeriodMH) * 100) : 0;
-  const isSingleOwner = ganttFilters.owner !== 'All';
-  const ownerTarget = isSingleOwner ? ganttFilters.owner : (lang === 'en' ? 'the team' : '團隊');
+  const ownerLabel = formatFilterDisplay(ganttFilters.owner, lang === 'en' ? 'the team' : '團隊');
+  const ownerTarget = ownerLabel;
   const topProjName = top3Projects.length > 0 ? top3Projects[0].desc : 'N/A';
 
   const delayedProjects = projectSummary.filter(p => !p.isOnTime);
@@ -433,7 +434,7 @@ export function generateAndDownloadHTMLReport(
             <div>
                 <h1 class="text-3xl font-bold tracking-tight text-slate-800"><i class="fa-solid fa-file-invoice mr-3 text-blue-600"></i>${reportTitle}</h1>
                 <div class="flex gap-4 mt-3 text-sm font-semibold text-slate-500">
-                    <span><i class="fa-solid fa-user mr-1"></i> ${t.owner}: <span class="text-slate-800">${ganttFilters.owner}</span></span>
+                    <span><i class="fa-solid fa-user mr-1"></i> ${t.owner}: <span class="text-slate-800">${formatFilterDisplay(ganttFilters.owner, 'All')}</span></span>
                     <span><i class="fa-solid fa-calendar mr-1"></i> Period: <span class="text-slate-800">${ganttFilters.startMonth} ~ ${ganttFilters.endMonth}</span></span>
                     <span><i class="fa-solid fa-clock mr-1"></i> Generated: <span class="text-slate-800">${new Date().toLocaleString()}</span></span>
                 </div>

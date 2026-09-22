@@ -4,6 +4,8 @@ import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { ProjectItem, ThemeColors, Language, FilterState } from '../types';
 import { TEXT } from '../constants/theme';
 import { shortName, getStatusColor, isDateOverlapping, generateAndDownloadHTMLReport, exportWizSummaryCSV } from '../utils/dataProcessor';
+import { MultiSelectDropdown } from './MultiSelectDropdown';
+import { matchesFilterValue, isFilterActive, toSelectedArray } from '../utils/filterHelpers';
 
 interface GanttChartProps {
   rawData: ProjectItem[];
@@ -33,26 +35,26 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   const t = TEXT[lang];
 
   // Derive unique filter options
-  const owners = ['All', ...new Set(rawData.map(d => d.owner))].sort();
-  const statuses = ['All', ...new Set(rawData.map(d => d.status))].sort();
-  const categories = ['All', ...new Set(rawData.map(d => d.category))].sort();
-  const clusters = ['All', ...new Set(rawData.map(d => d.cluster))].sort();
+  const owners = [...new Set(rawData.map(d => d.owner))].filter(Boolean).sort();
+  const statuses = [...new Set(rawData.map(d => d.status))].filter(Boolean).sort();
+  const categories = [...new Set(rawData.map(d => d.category))].filter(Boolean).sort();
+  const clusters = [...new Set(rawData.map(d => d.cluster))].filter(Boolean).sort();
   const monthOptions = ['All', ...months];
 
   // Filter gantt items
   const anyFilterActive =
-    ganttFilters.owner !== 'All' ||
-    ganttFilters.status !== 'All' ||
-    ganttFilters.category !== 'All' ||
-    ganttFilters.cluster !== 'All' ||
+    isFilterActive(ganttFilters.owner) ||
+    isFilterActive(ganttFilters.status) ||
+    isFilterActive(ganttFilters.category) ||
+    isFilterActive(ganttFilters.cluster) ||
     ganttFilters.startMonth !== 'All' ||
     ganttFilters.endMonth !== 'All';
 
   const ganttDataRows = rawData.filter(d => {
-    if (ganttFilters.owner !== 'All' && d.owner !== ganttFilters.owner) return false;
-    if (ganttFilters.status !== 'All' && d.status !== ganttFilters.status) return false;
-    if (ganttFilters.category !== 'All' && d.category !== ganttFilters.category) return false;
-    if (ganttFilters.cluster !== 'All' && d.cluster !== ganttFilters.cluster) return false;
+    if (!matchesFilterValue(d.owner, ganttFilters.owner)) return false;
+    if (!matchesFilterValue(d.status, ganttFilters.status)) return false;
+    if (!matchesFilterValue(d.category, ganttFilters.category)) return false;
+    if (!matchesFilterValue(d.cluster, ganttFilters.cluster)) return false;
     if (!isDateOverlapping(d, ganttFilters.startMonth, ganttFilters.endMonth)) return false;
     return true;
   });
@@ -329,71 +331,47 @@ export const GanttChart: React.FC<GanttChartProps> = ({
           style={{ backgroundColor: 'var(--bg-color)' }}
         >
           <div>
-            <label className="block text-[10px] font-semibold uppercase mb-1" style={{ color: 'var(--brand-text)' }}>
-              {t.owner}
-            </label>
-            <select
-              value={ganttFilters.owner}
-              onChange={(e) => setGanttFilters(prev => ({ ...prev, owner: e.target.value }))}
-              className="std-input text-xs"
-            >
-              {owners.map(o => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
-            </select>
+            <MultiSelectDropdown
+              id="gantt-filter-owner"
+              label={t.owner}
+              options={owners}
+              selectedValues={toSelectedArray(ganttFilters.owner)}
+              onChange={(selected) => setGanttFilters(prev => ({ ...prev, owner: selected.length === 0 ? 'All' : selected }))}
+              allLabel={lang === 'en' ? 'All Owners' : '全部負責人'}
+            />
           </div>
 
           <div>
-            <label className="block text-[10px] font-semibold uppercase mb-1" style={{ color: 'var(--brand-text)' }}>
-              {t.status}
-            </label>
-            <select
-              value={ganttFilters.status}
-              onChange={(e) => setGanttFilters(prev => ({ ...prev, status: e.target.value }))}
-              className="std-input text-xs"
-            >
-              {statuses.map(s => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
+            <MultiSelectDropdown
+              id="gantt-filter-status"
+              label={t.status}
+              options={statuses}
+              selectedValues={toSelectedArray(ganttFilters.status)}
+              onChange={(selected) => setGanttFilters(prev => ({ ...prev, status: selected.length === 0 ? 'All' : selected }))}
+              allLabel={lang === 'en' ? 'All Status' : '全部狀態'}
+            />
           </div>
 
           <div>
-            <label className="block text-[10px] font-semibold uppercase mb-1" style={{ color: 'var(--brand-text)' }}>
-              {t.category}
-            </label>
-            <select
-              value={ganttFilters.category}
-              onChange={(e) => setGanttFilters(prev => ({ ...prev, category: e.target.value }))}
-              className="std-input text-xs"
-            >
-              {categories.map(c => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+            <MultiSelectDropdown
+              id="gantt-filter-category"
+              label={t.category}
+              options={categories}
+              selectedValues={toSelectedArray(ganttFilters.category)}
+              onChange={(selected) => setGanttFilters(prev => ({ ...prev, category: selected.length === 0 ? 'All' : selected }))}
+              allLabel={lang === 'en' ? 'All Categories' : '全部類別'}
+            />
           </div>
 
           <div>
-            <label className="block text-[10px] font-semibold uppercase mb-1" style={{ color: 'var(--brand-text)' }}>
-              {t.cluster}
-            </label>
-            <select
-              value={ganttFilters.cluster}
-              onChange={(e) => setGanttFilters(prev => ({ ...prev, cluster: e.target.value }))}
-              className="std-input text-xs"
-            >
-              {clusters.map(cl => (
-                <option key={cl} value={cl}>
-                  {cl}
-                </option>
-              ))}
-            </select>
+            <MultiSelectDropdown
+              id="gantt-filter-cluster"
+              label={t.cluster}
+              options={clusters}
+              selectedValues={toSelectedArray(ganttFilters.cluster)}
+              onChange={(selected) => setGanttFilters(prev => ({ ...prev, cluster: selected.length === 0 ? 'All' : selected }))}
+              allLabel={lang === 'en' ? 'All Clusters' : '全部群組'}
+            />
           </div>
 
           <div className="md:col-span-2">

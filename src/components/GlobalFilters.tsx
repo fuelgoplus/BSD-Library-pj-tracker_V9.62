@@ -1,6 +1,8 @@
 import React from 'react';
 import { ProjectItem, FilterState, Language } from '../types';
 import { TEXT } from '../constants/theme';
+import { MultiSelectDropdown } from './MultiSelectDropdown';
+import { toSelectedArray } from '../utils/filterHelpers';
 
 interface GlobalFiltersProps {
   rawData: ProjectItem[];
@@ -19,86 +21,66 @@ export const GlobalFilters: React.FC<GlobalFiltersProps> = ({
 }) => {
   const t = TEXT[lang];
 
-  const owners = ['All', ...new Set(rawData.map(d => d.owner))].sort();
-  const statuses = ['All', ...new Set(rawData.map(d => d.status))].sort();
-  const categories = ['All', ...new Set(rawData.map(d => d.category))].sort();
-  const clusters = ['All', ...new Set(rawData.map(d => d.cluster))].sort();
+  const owners = [...new Set(rawData.map(d => d.owner))].filter(Boolean).sort();
+  const statuses = [...new Set(rawData.map(d => d.status))].filter(Boolean).sort();
+  const categories = [...new Set(rawData.map(d => d.category))].filter(Boolean).sort();
+  const clusters = [...new Set(rawData.map(d => d.cluster))].filter(Boolean).sort();
   const monthOptions = ['All', ...months];
 
   return (
     <div className="dashboard-card">
-      <div className="flex justify-between mb-2">
-        <span className="text-xs font-semibold uppercase" style={{ color: 'var(--text-sub)' }}>
+      <div className="flex justify-between items-center mb-2">
+        <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--text-sub)' }}>
           {lang === 'en' ? 'Global Filters (KPIs & Charts)' : '全域篩選 (KPI 與圖表)'}
+        </span>
+        <span className="text-[10px] text-slate-400 font-medium hidden sm:inline-block">
+          <i className="fa-solid fa-circle-info mr-1"></i>
+          {lang === 'en' ? 'Multi-select enabled for Owner, Status, Category & Cluster' : '負責人、狀態、類別與群組皆支援複選'}
         </span>
       </div>
       <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
         <div className="md:col-span-1">
-          <label id="lblOwner" className="block text-[10px] font-semibold uppercase mb-1" style={{ color: 'var(--brand-text)' }}>
-            {t.owner}
-          </label>
-          <select
-            value={filters.owner}
-            onChange={(e) => setFilters(prev => ({ ...prev, owner: e.target.value }))}
-            className="std-input"
-          >
-            {owners.map(o => (
-              <option key={o} value={o}>
-                {o}
-              </option>
-            ))}
-          </select>
+          <MultiSelectDropdown
+            id="filter-owner"
+            label={t.owner}
+            options={owners}
+            selectedValues={toSelectedArray(filters.owner)}
+            onChange={(selected) => setFilters(prev => ({ ...prev, owner: selected.length === 0 ? 'All' : selected }))}
+            allLabel={lang === 'en' ? 'All Owners' : '全部負責人'}
+          />
         </div>
 
         <div className="md:col-span-1">
-          <label id="lblStatus" className="block text-[10px] font-semibold uppercase mb-1" style={{ color: 'var(--brand-text)' }}>
-            {t.status}
-          </label>
-          <select
-            value={filters.status}
-            onChange={(e) => setFilters(prev => ({ ...prev, status: e.target.value }))}
-            className="std-input"
-          >
-            {statuses.map(s => (
-              <option key={s} value={s}>
-                {s}
-              </option>
-            ))}
-          </select>
+          <MultiSelectDropdown
+            id="filter-status"
+            label={t.status}
+            options={statuses}
+            selectedValues={toSelectedArray(filters.status)}
+            onChange={(selected) => setFilters(prev => ({ ...prev, status: selected.length === 0 ? 'All' : selected }))}
+            allLabel={lang === 'en' ? 'All Status' : '全部狀態'}
+          />
         </div>
 
         <div className="md:col-span-1">
-          <label id="lblCategory" className="block text-[10px] font-semibold uppercase mb-1" style={{ color: 'var(--brand-text)' }}>
-            {t.category}
-          </label>
-          <select
-            value={filters.category}
-            onChange={(e) => setFilters(prev => ({ ...prev, category: e.target.value }))}
-            className="std-input"
-          >
-            {categories.map(c => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+          <MultiSelectDropdown
+            id="filter-category"
+            label={t.category}
+            options={categories}
+            selectedValues={toSelectedArray(filters.category)}
+            onChange={(selected) => setFilters(prev => ({ ...prev, category: selected.length === 0 ? 'All' : selected }))}
+            allLabel={lang === 'en' ? 'All Categories' : '全部類別'}
+          />
         </div>
 
         <div className="md:col-span-1">
-          <label id="lblCluster" className="block text-[10px] font-semibold uppercase mb-1" style={{ color: 'var(--brand-text)' }}>
-            {t.cluster}
-          </label>
-          <select
-            value={filters.cluster}
-            onChange={(e) => setFilters(prev => ({ ...prev, cluster: e.target.value }))}
-            className="std-input"
-          >
-            {clusters.map(cl => (
-              <option key={cl} value={cl}>
-                {cl}
-              </option>
-            ))}
-          </select>
+          <MultiSelectDropdown
+            id="filter-cluster"
+            label={t.cluster}
+            options={clusters}
+            selectedValues={toSelectedArray(filters.cluster)}
+            onChange={(selected) => setFilters(prev => ({ ...prev, cluster: selected.length === 0 ? 'All' : selected }))}
+            allLabel={lang === 'en' ? 'All Clusters' : '全部群組'}
+          />
         </div>
 
         <div className="md:col-span-2">

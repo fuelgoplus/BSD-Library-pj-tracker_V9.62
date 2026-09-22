@@ -3,6 +3,7 @@ import { Chart } from 'chart.js/auto';
 import { ProjectItem, ThemeColors, Language, FilterState, WizViewMode } from '../types';
 import { TEXT } from '../constants/theme';
 import { shortName, isDateOverlapping, getCustomColor, getGenericPalette } from '../utils/dataProcessor';
+import { matchesFilterValue, formatFilterDisplay } from '../utils/filterHelpers';
 
 interface WizSummaryProps {
   isOpen: boolean;
@@ -36,10 +37,10 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
 
   // Filter rawData according to ganttFilters
   const wizData = rawData.filter(d => {
-    if (ganttFilters.owner !== 'All' && d.owner !== ganttFilters.owner) return false;
-    if (ganttFilters.status !== 'All' && d.status !== ganttFilters.status) return false;
-    if (ganttFilters.category !== 'All' && d.category !== ganttFilters.category) return false;
-    if (ganttFilters.cluster !== 'All' && d.cluster !== ganttFilters.cluster) return false;
+    if (!matchesFilterValue(d.owner, ganttFilters.owner)) return false;
+    if (!matchesFilterValue(d.status, ganttFilters.status)) return false;
+    if (!matchesFilterValue(d.category, ganttFilters.category)) return false;
+    if (!matchesFilterValue(d.cluster, ganttFilters.cluster)) return false;
     if (!isDateOverlapping(d, ganttFilters.startMonth, ganttFilters.endMonth)) return false;
     return true;
   });
@@ -357,6 +358,46 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
                   }
                   return ` ${context.dataset.label}: ${val.toFixed(1)} MH/d`;
                 }
+              },
+              labelTextColor: (context: any) => {
+                if (chartMode === 'project') {
+                  const status = (context.dataset.projectStatus || '').toLowerCase();
+                  if (status === 'closed') return '#F87171'; // Red text for closed projects
+                  if (status === 'processing') return '#38BDF8'; // Blue text for processing projects
+                  if (status === 'pending') return '#FBBF24'; // Amber for pending
+                  return '#F1F5F9';
+                } else {
+                  const time = labelTimes[context.dataIndex];
+                  const activeInCluster = (context.dataset.clusterProjects || []).filter(
+                    (p: any) => time >= p.startT && time <= p.endT
+                  );
+                  const hasClosed = activeInCluster.some((p: any) => (p.status || '').toLowerCase() === 'closed');
+                  const hasProcessing = activeInCluster.some((p: any) => (p.status || '').toLowerCase() === 'processing');
+                  if (hasClosed && !hasProcessing) return '#F87171';
+                  if (hasProcessing && !hasClosed) return '#38BDF8';
+                  return '#F1F5F9';
+                }
+              },
+              labelColor: (context: any) => {
+                if (chartMode === 'project') {
+                  const status = (context.dataset.projectStatus || '').toLowerCase();
+                  if (status === 'closed') {
+                    return {
+                      borderColor: '#EF4444',
+                      backgroundColor: '#EF4444',
+                    };
+                  }
+                  if (status === 'processing') {
+                    return {
+                      borderColor: '#0284C7',
+                      backgroundColor: '#38BDF8',
+                    };
+                  }
+                }
+                return {
+                  borderColor: context.dataset.backgroundColor,
+                  backgroundColor: context.dataset.backgroundColor,
+                };
               },
               footer: (tooltipItems: any[]) => {
                 let total = 0;
@@ -826,8 +867,8 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
       const top3MhSum = top3Projects.reduce((sum, p) => sum + p.mh, 0);
       const top3Pct = totalPeriodMH > 0 ? Math.round((top3MhSum / totalPeriodMH) * 100) : 0;
       const topProjName = top3Projects.length > 0 ? top3Projects[0].desc : 'N/A';
-      const isSingleOwner = ganttFilters.owner !== 'All';
-      const ownerTarget = isSingleOwner ? ganttFilters.owner : (lang === 'en' ? 'the team' : '團隊');
+      const ownerLabel = formatFilterDisplay(ganttFilters.owner, lang === 'en' ? 'the team' : '團隊');
+      const ownerTarget = ownerLabel;
 
       const delayedProjects = strictWizData.filter(p => !p.isOnTime);
       const actionRequired = strictWizData.filter(p => {
