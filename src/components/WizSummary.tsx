@@ -5,6 +5,7 @@ import { TEXT } from '../constants/theme';
 import { shortName, isDateOverlapping, getCustomColor, getGenericPalette } from '../utils/dataProcessor';
 import { matchesFilterValue, formatFilterDisplay } from '../utils/filterHelpers';
 import { WeeklyComprehensiveReport } from './WeeklyComprehensiveReport';
+import { ProjectDetailModal } from './ProjectDetailModal';
 
 interface WizSummaryProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
   const [chartStatusFilter, setChartStatusFilter] = useState<'all' | 'processing' | 'pending' | 'closed'>('all');
   const [weeklyColState, setWeeklyColState] = useState({ prev: true, curr: true, next: true });
   const [weeklySubView, setWeeklySubView] = useState<'columns' | 'comprehensive'>('columns');
+  const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
   const [openReminders, setOpenReminders] = useState<Record<string, boolean>>({});
   const [copiedReminders, setCopiedReminders] = useState<Record<string, boolean>>({});
 
@@ -449,7 +451,12 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
             const dateStr = getTaskDates(d);
 
             return (
-              <div key={`${d.desc}-${index}`} className="mb-3 p-3 rounded-lg shadow-sm wiz-task-card cursor-pointer group">
+              <div
+                key={`${d.desc}-${index}`}
+                onClick={() => setSelectedProject(d)}
+                className="mb-3 p-3 rounded-lg shadow-sm wiz-task-card cursor-pointer group hover:shadow-md transition-all relative"
+                title={lang === 'en' ? 'Click to view project details' : '點擊查看專案詳細資訊'}
+              >
                 <div className="flex justify-between items-start mb-1">
                   <span
                     className="font-semibold text-[15px] task-title transition-colors flex items-start gap-1 leading-[1.2]"
@@ -489,14 +496,19 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
                       <i className="fa-regular fa-clock text-[9px]"></i>
                       {accumMH} Total MH
                     </span>
+                    <span className="text-[10px] font-semibold text-slate-400 group-hover:text-blue-600 transition-colors flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/80 border border-slate-200 shadow-2xs">
+                      <i className="fa-solid fa-arrow-up-right-from-square text-[9px]"></i>
+                      {lang === 'en' ? 'Details' : '詳細'}
+                    </span>
                   </div>
                 </div>
                 {cleanHighlight.length > 2 && cleanHighlight.toLowerCase() !== 'tbd' && cleanHighlight.toLowerCase() !== 'n/a' ? (
                   <div className="text-[13px] font-medium text-slate-700 mt-1 leading-[1.2]">
-                    {shortName(cleanHighlight, 120)}
+                    {shortName(cleanHighlight, 140)}
                   </div>
                 ) : (
                   <textarea
+                    onClick={(e) => e.stopPropagation()}
                     className="w-full text-[12px] p-2 mt-2 border border-dashed rounded focus:bg-white outline-none transition-all resize-none custom-scrollbar shadow-inner leading-[1.2]"
                     style={{
                       borderColor: 'var(--border-color)',
@@ -564,14 +576,16 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
                             return (
                               <li
                                 key={`${p.desc}-${idx}`}
+                                onClick={() => setSelectedProject(p)}
                                 className="mb-2 p-1.5 rounded-r wiz-list-item cursor-pointer group list-none flex flex-col leading-[1.2]"
+                                title={lang === 'en' ? 'Click to view project details' : '點擊查看專案詳細資訊'}
                               >
                                 <span
                                   className="font-semibold text-[14.5px] task-title transition-colors flex items-start gap-1 leading-[1.2]"
                                   style={{ color: 'var(--text-main)', wordBreak: 'break-word' }}
                                 >
                                   <i className="fa-solid fa-caret-right mt-0.5 text-[13px] task-icon flex-shrink-0"></i>
-                                  <span className="flex flex-wrap items-center gap-1.5">
+                                  <span className="flex flex-wrap items-center gap-1.5 flex-grow">
                                     <span>{p.desc}</span>
                                     <span
                                       className="text-[10px] font-bold px-2 py-0.5 rounded shadow-xs whitespace-nowrap text-white flex items-center gap-1 leading-[1.2]"
@@ -584,16 +598,21 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
                                     <span className="text-[9px] px-1.5 py-0.5 rounded border border-slate-200 bg-slate-50 text-slate-500 whitespace-nowrap flex items-center gap-1">
                                       <i className="fa-regular fa-calendar-days"></i> {dateStr}
                                     </span>
+                                    <span className="text-[9px] font-semibold text-slate-400 group-hover:text-blue-600 transition-colors flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/80 border border-slate-200 shadow-2xs ml-auto">
+                                      <i className="fa-solid fa-arrow-up-right-from-square text-[8px]"></i>
+                                      {lang === 'en' ? 'Details' : '詳細'}
+                                    </span>
                                   </span>
                                 </span>
                                 {cleanHighlight.length > 2 &&
                                 cleanHighlight.toLowerCase() !== 'tbd' &&
                                 cleanHighlight.toLowerCase() !== 'n/a' ? (
                                   <span className="block pl-4 mt-1 text-[13px] font-medium text-slate-700 leading-[1.2]">
-                                    {shortName(cleanHighlight, 70)}
+                                    {shortName(cleanHighlight, 90)}
                                   </span>
                                 ) : (
                                   <textarea
+                                    onClick={(e) => e.stopPropagation()}
                                     className="block ml-4 mt-1 w-[90%] text-[12px] p-1 border border-dashed rounded focus:bg-white outline-none resize-none custom-scrollbar leading-[1.2]"
                                     style={{
                                       borderColor: 'var(--border-color)',
@@ -1606,6 +1625,14 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
           </div>
         </div>
       )}
+
+      {/* Project Detail Pop-up Screen */}
+      <ProjectDetailModal
+        project={selectedProject}
+        onClose={() => setSelectedProject(null)}
+        palette={palette}
+        lang={lang}
+      />
     </div>
   );
 };
