@@ -4,6 +4,7 @@ import { ProjectItem, ThemeColors, Language, FilterState, WizViewMode } from '..
 import { TEXT } from '../constants/theme';
 import { shortName, isDateOverlapping, getCustomColor, getGenericPalette } from '../utils/dataProcessor';
 import { matchesFilterValue, formatFilterDisplay } from '../utils/filterHelpers';
+import { WeeklyComprehensiveReport } from './WeeklyComprehensiveReport';
 
 interface WizSummaryProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
   const [chartMode, setChartMode] = useState<'cluster' | 'project'>('cluster');
   const [chartStatusFilter, setChartStatusFilter] = useState<'all' | 'processing' | 'pending' | 'closed'>('all');
   const [weeklyColState, setWeeklyColState] = useState({ prev: true, curr: true, next: true });
+  const [weeklySubView, setWeeklySubView] = useState<'columns' | 'comprehensive'>('columns');
   const [openReminders, setOpenReminders] = useState<Record<string, boolean>>({});
   const [copiedReminders, setCopiedReminders] = useState<Record<string, boolean>>({});
 
@@ -770,44 +772,95 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
       };
 
       return (
-        <div className="overflow-y-auto pr-2 custom-scrollbar" style={{ maxHeight: '350px' }}>
+        <div className="overflow-y-auto pr-2 custom-scrollbar transition-all duration-300" style={{ maxHeight: weeklySubView === 'comprehensive' ? '520px' : '350px' }}>
           <div
             className="mb-4 bg-gray-50 border p-2 rounded-lg flex justify-between items-center shadow-sm flex-wrap gap-2"
             style={{ borderColor: 'var(--border-color)' }}
           >
-            <span className="font-bold text-[13px] uppercase" style={{ color: 'var(--brand-text)' }}>
-              <i className="fa-solid fa-layer-group mr-1"></i>{' '}
-              {lang === 'en' ? 'Weekly Workload Summary' : '每週工作負載摘要'}
-            </span>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-[13px] uppercase" style={{ color: 'var(--brand-text)' }}>
+                <i className={weeklySubView === 'comprehensive' ? 'fa-solid fa-file-waveform mr-1' : 'fa-solid fa-layer-group mr-1'}></i>{' '}
+                {weeklySubView === 'comprehensive'
+                  ? (lang === 'en' ? 'Weekly & Period Comprehensive Report' : '每週與週期綜合評估報告')
+                  : (lang === 'en' ? 'Weekly Workload Summary' : '每週工作負載摘要')}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {weeklySubView === 'columns' && (
+                <div className="flex gap-1.5">
+                  <button
+                    onClick={() => setWeeklyColState(s => ({ ...s, prev: !s.prev }))}
+                    className="px-2 py-1 text-xs font-semibold rounded border transition-colors shadow-sm"
+                    style={getBtnStyle(weeklyColState.prev)}
+                  >
+                    {lang === 'en' ? 'Previous' : '上週'}
+                  </button>
+                  <button
+                    onClick={() => setWeeklyColState(s => ({ ...s, curr: !s.curr }))}
+                    className="px-2 py-1 text-xs font-semibold rounded border transition-colors shadow-sm"
+                    style={getBtnStyle(weeklyColState.curr)}
+                  >
+                    {lang === 'en' ? 'Current' : '本週'}
+                  </button>
+                  <button
+                    onClick={() => setWeeklyColState(s => ({ ...s, next: !s.next }))}
+                    className="px-2 py-1 text-xs font-semibold rounded border transition-colors shadow-sm"
+                    style={getBtnStyle(weeklyColState.next)}
+                  >
+                    {lang === 'en' ? 'Next' : '下週'}
+                  </button>
+                </div>
+              )}
+
+              {/* Distinct button to show comprehensive summary */}
               <button
-                onClick={() => setWeeklyColState(s => ({ ...s, prev: !s.prev }))}
-                className="px-2 py-1 text-xs font-semibold rounded border transition-colors shadow-sm"
-                style={getBtnStyle(weeklyColState.prev)}
+                id="btnWeeklyComprehensive"
+                onClick={() => setWeeklySubView(s => (s === 'columns' ? 'comprehensive' : 'columns'))}
+                className="px-2.5 py-1 text-xs font-bold rounded border transition-all shadow-sm flex items-center gap-1.5 hover:opacity-90"
+                style={
+                  weeklySubView === 'comprehensive'
+                    ? { backgroundColor: 'var(--brand-main)', color: '#FFFFFF', borderColor: 'var(--brand-main)' }
+                    : { backgroundColor: '#FFFFFF', color: 'var(--brand-text)', borderColor: 'var(--brand-text)' }
+                }
+                title={
+                  weeklySubView === 'comprehensive'
+                    ? (lang === 'en' ? 'Switch back to standard columns view' : '返回標準三週欄位檢視')
+                    : (lang === 'en' ? 'View comprehensive report on due-dates, progress, execution, deliverables and issue spotlights' : '檢視涵蓋到期日、進度更新、執行計畫、交付物與異常焦點之綜合報告')
+                }
               >
-                {lang === 'en' ? 'Previous' : '上週'}
-              </button>
-              <button
-                onClick={() => setWeeklyColState(s => ({ ...s, curr: !s.curr }))}
-                className="px-2 py-1 text-xs font-semibold rounded border transition-colors shadow-sm"
-                style={getBtnStyle(weeklyColState.curr)}
-              >
-                {lang === 'en' ? 'Current' : '本週'}
-              </button>
-              <button
-                onClick={() => setWeeklyColState(s => ({ ...s, next: !s.next }))}
-                className="px-2 py-1 text-xs font-semibold rounded border transition-colors shadow-sm"
-                style={getBtnStyle(weeklyColState.next)}
-              >
-                {lang === 'en' ? 'Next' : '下週'}
+                <i className={weeklySubView === 'comprehensive' ? 'fa-solid fa-table-columns' : 'fa-solid fa-file-waveform'}></i>
+                <span>
+                  {weeklySubView === 'comprehensive'
+                    ? (lang === 'en' ? 'Weekly Columns' : '標準三週欄位')
+                    : (lang === 'en' ? 'Comprehensive Report' : '週期綜合報告')}
+                </span>
+                {weeklySubView !== 'comprehensive' && (
+                  <span className="text-[9px] px-1 py-0.2 rounded font-extrabold bg-amber-400 text-black">
+                    NEW
+                  </span>
+                )}
               </button>
             </div>
           </div>
-          <div className="flex flex-col lg:flex-row gap-4 w-full items-stretch">
-            {renderWkCol(prevProjs, lang === 'en' ? 'Previous' : '上週', 'fa-solid fa-backward-step', 'prev', startTPrev, endTPrev)}
-            {renderWkCol(currProjs, lang === 'en' ? 'Current' : '本週', 'fa-solid fa-calendar-day', 'curr', startTCurr, endTCurr)}
-            {renderWkCol(nextProjs, lang === 'en' ? 'Next' : '下週', 'fa-solid fa-forward-step', 'next', startTNext, endTNext)}
-          </div>
+
+          {weeklySubView === 'comprehensive' ? (
+            <WeeklyComprehensiveReport
+              wizData={wizData}
+              rawData={rawData}
+              palette={palette}
+              lang={lang}
+              ganttFilters={ganttFilters}
+              periodText={periodText}
+              onBackToColumns={() => setWeeklySubView('columns')}
+            />
+          ) : (
+            <div className="flex flex-col lg:flex-row gap-4 w-full items-stretch">
+              {renderWkCol(prevProjs, lang === 'en' ? 'Previous' : '上週', 'fa-solid fa-backward-step', 'prev', startTPrev, endTPrev)}
+              {renderWkCol(currProjs, lang === 'en' ? 'Current' : '本週', 'fa-solid fa-calendar-day', 'curr', startTCurr, endTCurr)}
+              {renderWkCol(nextProjs, lang === 'en' ? 'Next' : '下週', 'fa-solid fa-forward-step', 'next', startTNext, endTNext)}
+            </div>
+          )}
         </div>
       );
     }
@@ -1304,57 +1357,72 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-6 text-sm w-full">
-          {/* Left summary column */}
-          <div className="md:col-span-4 lg:col-span-3 w-full">
-            <div className="flex flex-col gap-3 w-full">
-              <div>
+        <div className="flex flex-col gap-4 text-sm w-full">
+          {/* Top Info Banner: Active Projects, Period, Counts, and Owners Involved */}
+          <div
+            className="flex flex-wrap items-center justify-between gap-4 p-3 rounded-lg border shadow-xs transition-colors"
+            style={{
+              borderColor: 'var(--border-color)',
+              backgroundColor: 'rgba(0,0,0,0.02)',
+            }}
+          >
+            {/* Active Projects, Period, and Counts */}
+            <div className="flex flex-wrap items-center gap-3 sm:gap-6">
+              <div className="flex flex-wrap items-center gap-2">
                 <h4
-                  className="font-bold mb-1 uppercase text-xs flex flex-wrap items-center gap-2 leading-[1.2]"
+                  className="font-bold uppercase text-xs tracking-wider leading-[1.2]"
                   style={{ color: 'var(--brand-text)' }}
                 >
                   {t.wizProjects}
-                  <span
-                    className="text-[10px] px-2 py-0.5 rounded border border-gray-300 bg-opacity-50"
-                    style={{ color: 'var(--text-main)', backgroundColor: 'var(--bg-color)' }}
-                  >
-                    <i className="fa-regular fa-calendar mr-1"></i> {periodText}
-                  </span>
                 </h4>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-3xl font-bold leading-[1.2]" style={{ color: 'var(--text-main)' }}>
-                    {wizData.length}
-                  </p>
-                  <div className="text-[11px] leading-[1.2]" style={{ color: 'var(--text-sub)' }}>
-                    <span style={{ color: 'var(--brand-positive)', fontWeight: 'bold' }}>{closedCount}</span> Completed,{' '}
-                    <span style={{ color: 'var(--brand-text)', fontWeight: 'bold' }}>{processingCount}</span> In Progress
-                  </div>
-                </div>
+                <span
+                  className="text-[11px] font-semibold px-2 py-0.5 rounded border border-gray-300 shadow-2xs"
+                  style={{ color: 'var(--text-main)', backgroundColor: 'var(--card-bg)' }}
+                >
+                  <i className="fa-regular fa-calendar mr-1"></i> {periodText}
+                </span>
               </div>
 
-              <div>
-                <h4 className="font-bold mb-1 uppercase text-xs leading-[1.2]" style={{ color: 'var(--brand-text)' }}>
-                  {t.wizOwners}
-                </h4>
-                <div className="flex flex-wrap gap-1">
-                  {uniqueOwners.map(o => (
-                    <span
-                      key={o}
-                      className="px-2 py-0.5 rounded text-[10px] border leading-[1.2]"
-                      style={{ borderColor: 'var(--border-color)', color: 'var(--text-sub)' }}
-                    >
-                      {o}
-                    </span>
-                  ))}
+              <div className="flex items-baseline gap-2">
+                <p className="text-2xl font-black leading-none" style={{ color: 'var(--text-main)' }}>
+                  {wizData.length}
+                </p>
+                <div className="text-[11.5px] leading-none" style={{ color: 'var(--text-sub)' }}>
+                  <span style={{ color: 'var(--brand-positive)', fontWeight: 'bold' }}>{closedCount}</span>{' '}
+                  {lang === 'en' ? 'Completed' : '已結案'},{' '}
+                  <span style={{ color: 'var(--brand-text)', fontWeight: 'bold' }}>{processingCount}</span>{' '}
+                  {lang === 'en' ? 'In Progress' : '執行中'}
                 </div>
+              </div>
+            </div>
+
+            {/* Owners Involved */}
+            <div className="flex flex-wrap items-center gap-2">
+              <h4
+                className="font-bold uppercase text-xs tracking-wider leading-[1.2]"
+                style={{ color: 'var(--brand-text)' }}
+              >
+                {t.wizOwners}:
+              </h4>
+              <div className="flex flex-wrap gap-1">
+                {uniqueOwners.map(o => (
+                  <span
+                    key={o}
+                    className="px-2 py-0.5 rounded text-[11px] font-medium border bg-white shadow-2xs leading-[1.2]"
+                    style={{ borderColor: 'var(--border-color)', color: 'var(--text-main)' }}
+                  >
+                    <i className="fa-regular fa-user mr-1 text-[10px] text-slate-400"></i>
+                    {o}
+                  </span>
+                ))}
               </div>
             </div>
           </div>
 
-          {/* Right deliverables and breakdown column */}
-          <div className="md:col-span-8 lg:col-span-9 flex flex-col w-full overflow-hidden">
+          {/* Full-width Deliverables and breakdown section */}
+          <div className="flex flex-col w-full overflow-hidden">
             <div
-              className="flex flex-wrap justify-between items-end gap-3 mb-3 border-b pb-2"
+              className="flex flex-wrap justify-between items-center gap-3 mb-3 border-b pb-2"
               style={{ borderColor: 'var(--border-color)' }}
             >
               <h4 className="font-bold uppercase text-xs leading-[1.2]" style={{ color: 'var(--brand-text)' }}>
@@ -1440,7 +1508,7 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
 
           {/* Workload Daily MH/d section */}
           <div
-            className="md:col-span-12 mt-2 border-t pt-4 p-2 rounded-lg glow-card-hover transition-all duration-300 w-full"
+            className="mt-2 border-t pt-4 p-2 rounded-lg glow-card-hover transition-all duration-300 w-full"
             style={{ borderColor: 'var(--border-color)' }}
           >
             <h4
