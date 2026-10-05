@@ -153,3 +153,14 @@ h1, h2, h3, h4, h5, h6 { letter-spacing: -0.015em; line-height: 1.2; }
 .glow-card-hover { transition: all 0.3s ease; }
 .glow-card-hover:hover { box-shadow: 0 0 15px rgba(128, 54, 201, 0.35); border-color: var(--text-blue) !important; }
 
+.dropdown-option {
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+.dropdown-option:hover {
+  background-color: rgba(20, 149, 204, 0.14) !important;
+}
+.dropdown-option:hover .dropdown-option-text {
+  color: var(--brand-text) !important;
+  font-weight: 700;
+}
+

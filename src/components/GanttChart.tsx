@@ -1,11 +1,16 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Chart } from 'chart.js/auto';
 import ChartDataLabels from 'chartjs-plugin-datalabels';
 import { ProjectItem, ThemeColors, Language, FilterState } from '../types';
 import { TEXT } from '../constants/theme';
-import { shortName, getStatusColor, isDateOverlapping, generateAndDownloadHTMLReport, exportWizSummaryCSV } from '../utils/dataProcessor';
+import { shortName, cleanProjectDesc, getStatusColor, isDateOverlapping, generateAndDownloadHTMLReport, exportWizSummaryCSV } from '../utils/dataProcessor';
 import { MultiSelectDropdown } from './MultiSelectDropdown';
 import { matchesFilterValue, isFilterActive, toSelectedArray } from '../utils/filterHelpers';
+import {
+  GanttDisplayOptions,
+  GanttDisplayOption,
+  formatGanttBarLabel,
+} from './GanttDisplayOptions';
 
 interface GanttChartProps {
   rawData: ProjectItem[];
@@ -30,6 +35,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   isWizOpen,
   onShowNotice,
 }) => {
+  const [displayOptions, setDisplayOptions] = useState<GanttDisplayOption[]>(['duration', 'period']);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const chartInstanceRef = useRef<Chart | null>(null);
   const t = TEXT[lang];
@@ -64,7 +70,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
     .sort((a, b) => ((a.rev || a.due)?.getTime() || 0) - ((b.rev || b.due)?.getTime() || 0));
 
   const hasData = anyFilterActive && sortedGanttData.length > 0;
-  const containerHeight = Math.max(300, sortedGanttData.length * 22);
+  const containerHeight = Math.max(340, sortedGanttData.length * 36 + 60);
 
   useEffect(() => {
     if (!hasData || !canvasRef.current) {
@@ -80,7 +86,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       chartInstanceRef.current = null;
     }
 
-    const ganttLabels = sortedGanttData.map(d => shortName(d.desc, 25));
+    const ganttLabels = sortedGanttData.map(d => shortName(d.desc, 30));
     const ganttData = sortedGanttData.map(d => {
       const end = (d.rev || d.due)!;
       const durDays = d.duration || 0;
@@ -165,7 +171,20 @@ export const GanttChart: React.FC<GanttChartProps> = ({
         ],
       },
       options: {
-        layout: { padding: { top: 25, right: 50 } },
+        layout: {
+          padding: {
+            top: 25,
+            right: displayOptions.length >= 5
+              ? 500
+              : displayOptions.length >= 3
+              ? 360
+              : displayOptions.includes('brief')
+              ? 240
+              : displayOptions.length >= 1
+              ? 180
+              : 65,
+          },
+        },
         responsive: true,
         maintainAspectRatio: false,
         indexAxis: 'y',
@@ -186,6 +205,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
           y: {
             grid: { display: false },
             ticks: {
+              autoSkip: false,
               color: palette.textMain,
               font: {
                 size: 12.5,
@@ -220,24 +240,35 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                   timeZone: 'UTC',
                 });
                 return [
-                  `${item.desc}`,
+                  `Status: ${item.status || '-'}`,
+                  `Category: ${item.category || '-'}`,
+                  `Cluster: ${item.cluster || '-'}`,
+                  `Project Brief: ${cleanProjectDesc(item.desc)}`,
                   `Duration: ${item.duration} days`,
-                  `MH/Day: ${item.dailyMH}`,
-                  `${start} - ${end}`,
+                  `MH/Days: ${item.dailyMH}`,
+                  `Period: ${start} ~ ${end}`,
                 ];
               },
             },
           },
           datalabels: {
-            display: 'auto',
+            display: (ctx: any) => {
+              if (displayOptions.length === 0) return false;
+              const val = formatGanttBarLabel(sortedGanttData[ctx.dataIndex], displayOptions, lang);
+              return val !== '';
+            },
             anchor: 'end',
             align: 'end',
-            offset: (ctx: any) => (ctx.dataIndex % 2 === 0 ? 4 : 26),
+            offset: 6,
             color: palette.textMain,
-            font: { weight: 'bold' },
+            font: {
+              size: 11,
+              weight: 'bold',
+              family: "'Microsoft JhengHei UI', 'Quicksand', sans-serif",
+            },
             formatter: (_value: any, ctx: any) => {
               const item = sortedGanttData[ctx.dataIndex];
-              return item.duration;
+              return formatGanttBarLabel(item, displayOptions, lang);
             },
           },
         },
@@ -251,7 +282,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
         chartInstanceRef.current = null;
       }
     };
-  }, [rawData, ganttFilters, palette, lang]);
+  }, [rawData, ganttFilters, palette, lang, displayOptions]);
 
   const handleExportHTML = () => {
     const success = generateAndDownloadHTMLReport(rawData, ganttFilters, lang);
@@ -307,12 +338,16 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             <button
               id="btnWiz"
               onClick={onToggleWiz}
-              className="px-3 py-1 text-xs font-semibold rounded flex items-center gap-2 hover:opacity-90 shadow-sm transition-all"
+              className={`px-3 py-1 text-xs font-semibold rounded flex items-center gap-2 hover:opacity-90 active:scale-95 shadow-sm transition-all cursor-pointer ${
+                isWizOpen ? 'ring-2 ring-offset-1' : ''
+              }`}
               style={{
-                backgroundColor: 'var(--brand-accent)',
-                color: '#1A1A1A',
+                backgroundColor: isWizOpen ? 'var(--brand-main)' : 'var(--brand-accent)',
+                color: isWizOpen ? '#FFFFFF' : '#1A1A1A',
                 transform: isWizOpen ? 'scale(1.03)' : 'none',
               }}
+              aria-pressed={isWizOpen}
+              title={isWizOpen ? (lang === 'en' ? 'Close Wiz' : '關閉 Wiz') : (lang === 'en' ? 'Open Wiz' : '開啟 Wiz')}
             >
               <i className="fa-solid fa-wand-magic-sparkles"></i> <span>{t.wizBtn}</span>
             </button>
@@ -327,7 +362,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
 
         {/* Independent Filters */}
         <div
-          className="grid grid-cols-2 md:grid-cols-6 gap-2 mt-4 bg-opacity-10 p-3 rounded-lg"
+          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 mt-4 bg-opacity-10 p-3 rounded-lg"
           style={{ backgroundColor: 'var(--bg-color)' }}
         >
           <div>
@@ -374,7 +409,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             />
           </div>
 
-          <div className="md:col-span-2">
+          <div className="col-span-2 sm:col-span-2 md:col-span-2 lg:col-span-2">
             <label className="block text-[10px] font-semibold uppercase mb-1" style={{ color: 'var(--brand-text)' }}>
               {t.month}
             </label>
@@ -403,6 +438,16 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                 ))}
               </select>
             </div>
+          </div>
+
+          {/* Grid on right hand side of period (month) as multi-options to show project brief, duration, MH/Days and period */}
+          <div className="col-span-2 sm:col-span-1 md:col-span-2 lg:col-span-1">
+            <GanttDisplayOptions
+              selectedOptions={displayOptions}
+              onChange={setDisplayOptions}
+              lang={lang}
+              palette={palette}
+            />
           </div>
         </div>
       </div>

@@ -6,6 +6,7 @@ import { shortName, isDateOverlapping, getCustomColor, getGenericPalette } from 
 import { matchesFilterValue, formatFilterDisplay } from '../utils/filterHelpers';
 import { WeeklyComprehensiveReport } from './WeeklyComprehensiveReport';
 import { ProjectDetailModal } from './ProjectDetailModal';
+import { WizGanttModal } from './WizGanttModal';
 
 interface WizSummaryProps {
   isOpen: boolean;
@@ -30,6 +31,10 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
   const [weeklyColState, setWeeklyColState] = useState({ prev: true, curr: true, next: true });
   const [weeklySubView, setWeeklySubView] = useState<'columns' | 'comprehensive'>('columns');
   const [selectedProject, setSelectedProject] = useState<ProjectItem | null>(null);
+  const [isGanttModalOpen, setIsGanttModalOpen] = useState(false);
+  const [ganttModalMode, setGanttModalMode] = useState<'category' | 'project'>('category');
+  const [ganttTargetCategory, setGanttTargetCategory] = useState<string>('all');
+  const [ganttTargetCluster, setGanttTargetCluster] = useState<string>('all');
   const [openReminders, setOpenReminders] = useState<Record<string, boolean>>({});
   const [copiedReminders, setCopiedReminders] = useState<Record<string, boolean>>({});
 
@@ -443,6 +448,36 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
     if (viewMode === 'project') {
       return (
         <div className="overflow-y-auto pr-2 custom-scrollbar" style={{ maxHeight: '350px' }}>
+          {/* Gantt Chart Quick Launch Banner */}
+          <div
+            className="mb-3 p-2.5 rounded-lg border flex flex-wrap items-center justify-between gap-2 shadow-2xs transition-colors"
+            style={{
+              backgroundColor: 'rgba(37, 99, 235, 0.05)',
+              borderColor: 'rgba(37, 99, 235, 0.2)',
+            }}
+          >
+            <div className="flex items-center gap-2 text-xs font-medium" style={{ color: 'var(--text-main)' }}>
+              <i className="fa-solid fa-chart-gantt text-blue-600"></i>
+              <span>
+                {lang === 'en'
+                  ? 'Project Timeline Gantt: X-axis shows execution dates, Y-axis shows project descriptions.'
+                  : '專案甘特圖：X 軸展示日期時程，Y 軸為專案項目描述。'}
+              </span>
+            </div>
+            <button
+              onClick={() => {
+                setGanttModalMode('project');
+                setGanttTargetCategory('all');
+                setGanttTargetCluster('all');
+                setIsGanttModalOpen(true);
+              }}
+              className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
+            >
+              <i className="fa-solid fa-chart-gantt text-[11px]"></i>
+              <span>{lang === 'en' ? 'Open Project Gantt' : '開啟專案甘特圖'}</span>
+            </button>
+          </div>
+
           {wizData.map((d, index) => {
             const pDur = d.duration || 0;
             const pMH = d.dailyMH || 0;
@@ -538,35 +573,111 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
 
       return (
         <div className="overflow-y-auto pr-2 custom-scrollbar" style={{ maxHeight: '350px' }}>
+          {/* Category Gantt Chart Action Banner */}
+          <div
+            className="mb-4 p-3 rounded-lg border flex flex-wrap items-center justify-between gap-3 shadow-2xs transition-colors"
+            style={{
+              backgroundColor: 'rgba(37, 99, 235, 0.06)',
+              borderColor: 'rgba(37, 99, 235, 0.25)',
+            }}
+          >
+            <div>
+              <div className="flex items-center gap-2 text-xs font-bold" style={{ color: 'var(--text-main)' }}>
+                <i className="fa-solid fa-diagram-project text-blue-600"></i>
+                <span>{lang === 'en' ? 'Category Gantt Chart' : '類別甘特圖'}</span>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                {lang === 'en'
+                  ? 'Visualize project timeline by category (X-axis: Dates, Y-axis: Project descriptions).'
+                  : '以甘特圖檢視類別專案時程（X 軸日期資訊，Y 軸專案描述）。'}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                setGanttModalMode('category');
+                setGanttTargetCategory('all');
+                setGanttTargetCluster('all');
+                setIsGanttModalOpen(true);
+              }}
+              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 shadow-xs"
+            >
+              <i className="fa-solid fa-chart-gantt text-[11px]"></i>
+              <span>{lang === 'en' ? 'Open Category Gantt' : '開啟類別甘特圖'}</span>
+            </button>
+          </div>
+
           {Object.keys(grouped)
             .sort()
-            .map(cat => (
-              <div key={cat} className="mb-5">
-                <h5
-                  className="font-bold text-sm border-b-2 pb-1 mb-3 leading-[1.2]"
-                  style={{ color: 'var(--brand-text)', borderColor: 'var(--border-color)' }}
-                >
-                  {cat}
-                </h5>
-                {Object.keys(grouped[cat])
-                  .sort()
-                  .map(clust => {
-                    const projs = grouped[cat][clust];
-                    return (
-                      <div key={clust} className="mb-3 ml-2">
-                        <h6
-                          className="font-semibold text-[13px] mb-1.5 leading-[1.2]"
-                          style={{ color: 'var(--brand-sub)' }}
-                        >
-                          <i className="fa-solid fa-layer-group mr-1"></i>
-                          {clust}
-                          <span
-                            className="text-[10px] font-normal px-1.5 py-0.5 rounded ml-1"
-                            style={{ backgroundColor: 'rgba(0,0,0,0.05)', color: 'var(--text-sub)' }}
-                          >
-                            {projs.length} items
-                          </span>
-                        </h6>
+            .map(cat => {
+              const totalCatItems = Object.values(grouped[cat]).reduce((acc, curr) => acc + curr.length, 0);
+              return (
+                <div key={cat} className="mb-5">
+                  <div
+                    className="flex items-center justify-between border-b-2 pb-1 mb-3 flex-wrap gap-2"
+                    style={{ borderColor: 'var(--border-color)' }}
+                  >
+                    <h5
+                      className="font-bold text-sm leading-[1.2] flex items-center gap-2"
+                      style={{ color: 'var(--brand-text)' }}
+                    >
+                      <i className="fa-solid fa-folder-tree text-xs text-blue-600"></i>
+                      <span>{cat}</span>
+                      <span
+                        className="text-[10px] font-normal px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: 'rgba(0,0,0,0.06)', color: 'var(--text-sub)' }}
+                      >
+                        {totalCatItems} items
+                      </span>
+                    </h5>
+                    <button
+                      onClick={() => {
+                        setGanttModalMode('category');
+                        setGanttTargetCategory(cat);
+                        setGanttTargetCluster('all');
+                        setIsGanttModalOpen(true);
+                      }}
+                      className="text-[11px] font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1.5 px-2.5 py-1 rounded bg-blue-50 hover:bg-blue-100 border border-blue-200 shadow-2xs transition-colors"
+                      title={lang === 'en' ? `Open Category Gantt for ${cat}` : `開啟「${cat}」類別甘特圖`}
+                    >
+                      <i className="fa-solid fa-chart-gantt text-[11px]"></i>
+                      <span>{lang === 'en' ? 'Category Gantt' : '類別甘特圖'}</span>
+                    </button>
+                  </div>
+                  {Object.keys(grouped[cat])
+                    .sort()
+                    .map(clust => {
+                      const projs = grouped[cat][clust];
+                      return (
+                        <div key={clust} className="mb-3 ml-2">
+                          <div className="flex items-center justify-between mb-1.5 flex-wrap gap-2">
+                            <h6
+                              className="font-semibold text-[13px] leading-[1.2] flex items-center"
+                              style={{ color: 'var(--brand-sub)' }}
+                            >
+                              <i className="fa-solid fa-layer-group mr-1"></i>
+                              {clust}
+                              <span
+                                className="text-[10px] font-normal px-1.5 py-0.5 rounded ml-1"
+                                style={{ backgroundColor: 'rgba(0,0,0,0.05)', color: 'var(--text-sub)' }}
+                              >
+                                {projs.length} items
+                              </span>
+                            </h6>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setGanttModalMode('category');
+                                setGanttTargetCategory(cat);
+                                setGanttTargetCluster(clust);
+                                setIsGanttModalOpen(true);
+                              }}
+                              className="text-[10.5px] font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1 px-2 py-0.5 rounded bg-blue-50/80 border border-blue-200/80 shadow-2xs hover:bg-blue-100 transition-colors"
+                              title={lang === 'en' ? `Open Gantt chart for cluster: ${clust}` : `開啟「${clust}」群組甘特圖`}
+                            >
+                              <i className="fa-solid fa-chart-gantt text-[10px]"></i>
+                              <span>{lang === 'en' ? 'Cluster Gantt' : '群組甘特圖'}</span>
+                            </button>
+                          </div>
                         <ul className="hl-list mt-1 ml-2 mb-3">
                           {projs.map((p, idx) => {
                             const cleanHighlight = p.highlights ? p.highlights.replace(/[•*-]/g, '').trim() : '';
@@ -631,7 +742,8 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
                     );
                   })}
               </div>
-            ))}
+            );
+          })}
         </div>
       );
     }
@@ -1444,9 +1556,38 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
               className="flex flex-wrap justify-between items-center gap-3 mb-3 border-b pb-2"
               style={{ borderColor: 'var(--border-color)' }}
             >
-              <h4 className="font-bold uppercase text-xs leading-[1.2]" style={{ color: 'var(--brand-text)' }}>
-                {t.wizDeliv}
-              </h4>
+              <div className="flex items-center gap-3">
+                <h4 className="font-bold uppercase text-xs leading-[1.2]" style={{ color: 'var(--brand-text)' }}>
+                  {t.wizDeliv}
+                </h4>
+                {/* Section-Aware Gantt Chart Launch Button */}
+                <button
+                  onClick={() => {
+                    setGanttModalMode(viewMode === 'category' ? 'category' : 'project');
+                    setGanttTargetCategory('all');
+                    setGanttTargetCluster('all');
+                    setIsGanttModalOpen(true);
+                  }}
+                  className="btn-tooltip flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-all shadow-2xs hover:shadow-xs hover:scale-102"
+                  data-tooltip={
+                    viewMode === 'category'
+                      ? (lang === 'en' ? 'Open Category Gantt Chart' : '開啟類別甘特圖')
+                      : (lang === 'en' ? 'Open Project Timeline Gantt Chart' : '開啟專案時程甘特圖')
+                  }
+                  style={{
+                    backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                    borderColor: 'rgba(37, 99, 235, 0.3)',
+                    color: '#2563EB',
+                  }}
+                >
+                  <i className="fa-solid fa-chart-gantt text-xs"></i>
+                  <span>
+                    {viewMode === 'category'
+                      ? (lang === 'en' ? 'Category Gantt' : '類別甘特圖')
+                      : (lang === 'en' ? 'Project Gantt' : '專案甘特圖')}
+                  </span>
+                </button>
+              </div>
               <div
                 className="flex flex-wrap rounded p-0.5 shadow-sm"
                 style={{ backgroundColor: 'var(--bg-color)', border: '1px solid var(--border-color)' }}
@@ -1632,6 +1773,20 @@ export const WizSummary: React.FC<WizSummaryProps> = ({
         onClose={() => setSelectedProject(null)}
         palette={palette}
         lang={lang}
+      />
+
+      {/* Wiz Gantt Chart Modal (Same format, style, and layout as Project Schedule Gantt) */}
+      <WizGanttModal
+        isOpen={isGanttModalOpen}
+        onClose={() => setIsGanttModalOpen(false)}
+        wizData={rawData}
+        palette={palette}
+        lang={lang}
+        initialMode={ganttModalMode}
+        initialCategory={ganttTargetCategory}
+        initialCluster={ganttTargetCluster}
+        periodText={periodText}
+        ganttFilters={ganttFilters}
       />
     </div>
   );

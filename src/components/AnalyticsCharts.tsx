@@ -161,7 +161,7 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
       options: {
         ...commonOpts,
         scales: {
-          x: { stacked: true, grid: { display: false }, ticks: { color: palette.textMain } },
+          x: { stacked: true, grid: { display: false }, ticks: { color: palette.textMain, autoSkip: false } },
           y: { stacked: true, grid: { color: palette.border }, ticks: { color: palette.textMain } },
         },
         plugins: {
@@ -241,6 +241,7 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({
             stacked: true,
             grid: { display: false },
             ticks: {
+              autoSkip: false,
               color: palette.textMain,
               font: { size: 12.5, family: "'Microsoft JhengHei UI', 'Quicksand', sans-serif" },
             },

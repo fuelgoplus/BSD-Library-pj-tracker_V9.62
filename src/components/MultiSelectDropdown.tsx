@@ -138,15 +138,21 @@ export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
           <div className="max-h-56 overflow-y-auto custom-scrollbar p-1 flex flex-col gap-0.5">
             {/* All Checkbox */}
             <label
-              className="flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer text-xs select-none hover:bg-black hover:bg-opacity-5 transition-colors"
+              className="dropdown-option flex items-center gap-2 px-2.5 py-1.5 rounded cursor-pointer text-xs select-none transition-colors"
+              style={{
+                backgroundColor: isAllSelected ? 'rgba(20, 149, 204, 0.08)' : 'transparent',
+              }}
             >
               <input
                 type="checkbox"
                 checked={isAllSelected}
                 onChange={handleSelectAll}
-                className="rounded border-gray-300 text-sky-600 focus:ring-sky-500 h-3.5 w-3.5 cursor-pointer"
+                className="rounded border-gray-300 text-sky-600 focus:ring-sky-500 h-3.5 w-3.5 cursor-pointer accent-[var(--brand-main)]"
               />
-              <span className={`truncate ${isAllSelected ? 'font-bold' : ''}`} style={{ color: 'var(--text-main)' }}>
+              <span
+                className={`dropdown-option-text truncate ${isAllSelected ? 'font-bold' : 'font-medium'}`}
+                style={{ color: isAllSelected ? 'var(--brand-text)' : 'var(--text-main)' }}
+              >
                 {allLabel}
               </span>
             </label>
@@ -157,18 +163,19 @@ export const MultiSelectDropdown: React.FC<MultiSelectDropdownProps> = ({
               return (
                 <label
                   key={opt}
-                  className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer text-xs select-none transition-colors ${
-                    checked ? 'bg-sky-50 dark:bg-sky-950/30' : 'hover:bg-black hover:bg-opacity-5'
-                  }`}
+                  className="dropdown-option flex items-center gap-2 px-2.5 py-1.5 rounded cursor-pointer text-xs select-none transition-colors"
+                  style={{
+                    backgroundColor: checked ? 'rgba(20, 149, 204, 0.08)' : 'transparent',
+                  }}
                 >
                   <input
                     type="checkbox"
                     checked={checked}
                     onChange={() => toggleOption(opt)}
-                    className="rounded border-gray-300 text-sky-600 focus:ring-sky-500 h-3.5 w-3.5 cursor-pointer"
+                    className="rounded border-gray-300 text-sky-600 focus:ring-sky-500 h-3.5 w-3.5 cursor-pointer accent-[var(--brand-main)]"
                   />
                   <span
-                    className={`truncate ${checked ? 'font-semibold' : ''}`}
+                    className={`dropdown-option-text truncate ${checked ? 'font-bold' : 'font-medium'}`}
                     style={{ color: checked ? 'var(--brand-text)' : 'var(--text-main)' }}
                   >
                     {opt}

@@ -17,9 +17,18 @@ export function formatDate(d: Date | null): string {
   return d ? d.toISOString().split('T')[0] : '-';
 }
 
+export function cleanProjectDesc(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/^\s*(\[|\(|\{)?\s*marcom\s*(\]|\)|\})?\s*[-:_–—|/]?\s*/i, '')
+    .replace(/\r?\n+/g, ' ')
+    .trim();
+}
+
 export function shortName(text: string, len = 25): string {
   if (!text) return '';
-  return text.length > len ? text.substring(0, len) + '...' : text;
+  const clean = cleanProjectDesc(text);
+  return clean.length > len ? clean.substring(0, len) + '...' : clean;
 }
 
 export function formatBullets(text: string): string[] {
@@ -37,8 +46,15 @@ export function processData(json: any[]): ProjectItem[] {
       const owner = (row['Owner'] || 'Unassigned').toString().trim();
       if (owner.toLowerCase() === 'unassigned') return null;
 
-      const due = parseDate(row['Due Date']);
-      const rev = parseDate(row['Revision_1']);
+      const due = parseDate(row['Due Date'] || row['Due'] || row['Due date']);
+      const rev = parseDate(
+        row['Revision_ 1'] ||
+        row['Revision_1'] ||
+        row['Revision 1'] ||
+        row['Rev. End'] ||
+        row['Revised End Date'] ||
+        row['Revision']
+      );
 
       let isOnTime = true;
       if (rev && due) {
@@ -89,7 +105,8 @@ export function processData(json: any[]): ProjectItem[] {
       dailyMH = Number(dailyMH.toFixed(3));
 
       const deviation = row['Deviation'] !== undefined ? row['Deviation'] : '';
-      const desc = (row['P.J Description'] || row['Description'] || '').toString();
+      const rawDesc = (row['P.J Description'] || row['Description'] || '').toString();
+      const desc = cleanProjectDesc(rawDesc);
 
       if (desc.includes('MCU-Driven CDU strategy')) {
         duration = 5;
